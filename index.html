@@ -11,41 +11,39 @@
         html, body { height: 100%; overflow: hidden; background: var(--spotify-black); color: var(--text-primary); font-family: 'Figtree', sans-serif; }
         .dynamic-bg { position: fixed; inset: 0; z-index: 0; background: linear-gradient(180deg, #333 0%, #121212 100%); transition: background 1s ease; }
         .app { position: relative; z-index: 3; width: 100%; height: 100vh; display: flex; flex-direction: column; max-width: 400px; margin: 0 auto; }
-        .search-container { padding: 15px 20px 5px; position: relative; z-index: 100; }
-        .search-input { width: 100%; padding: 12px 20px; border-radius: 25px; border: none; background: rgba(255,255,255,0.1); color: white; outline: none; font-size: 14px; }
-        .search-results { position: absolute; top: 65px; left: 20px; right: 20px; background: #282828; border-radius: 8px; max-height: 350px; overflow-y: auto; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 1000; border: 1px solid rgba(255,255,255,0.1); }
-        .search-item { display: flex; align-items: center; gap: 12px; padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .search-container { padding: 15px 20px 5px; position: relative; z-index: 1000; }
+        .search-input { width: 100%; padding: 12px 20px; border-radius: 25px; border: none; background: rgba(255,255,255,0.15); color: white; outline: none; font-size: 14px; border: 1px solid transparent; transition: 0.3s; }
+        .search-input:focus { background: rgba(255,255,255,0.2); border-color: var(--spotify-green); }
+        .search-results { position: absolute; top: 65px; left: 20px; right: 20px; background: #282828; border-radius: 8px; max-height: 400px; overflow-y: auto; display: none; box-shadow: 0 15px 35px rgba(0,0,0,0.9); z-index: 9999; border: 1px solid rgba(255,255,255,0.1); }
+        .search-item { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .search-item:hover { background: #3e3e3e; }
         .search-item img { width: 45px; height: 45px; border-radius: 4px; object-fit: cover; }
-        .search-item-info { overflow: hidden; }
+        .search-item-info { overflow: hidden; flex: 1; }
         .search-item-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .search-item-artist { font-size: 11px; color: var(--text-secondary); }
-        .top-bar { display: flex; align-items: center; justify-content: center; padding: 10px 20px; flex-shrink: 0; }
-        .header-profile { display: flex; align-items: center; gap: 10px; }
-        .profile-img { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); }
-        .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; z-index: 5; }
         .album-cover-container { width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #222; }
         .album-img { width: 100%; height: 100%; object-fit: cover; }
         .song-info-row { display: flex; align-items: center; justify-content: space-between; margin-top: 25px; }
         .song-title { font-size: 20px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .artist-name { font-size: 14px; color: var(--text-secondary); }
-        .heart-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; }
-        .heart-btn.liked { color: var(--spotify-red); }
-        .heart-btn svg { width: 26px; height: 26px; fill: currentColor; }
-        .controls-wrapper { margin-top: 20px; }
-        .progress-rail { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; }
+        
+        .progress-rail { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; margin-top: 20px; }
         .progress-fill { height: 100%; width: 0%; background: #fff; border-radius: 2px; }
         .time-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
+        
         .btns-row { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
         .c-btn { background: none; border: none; color: #fff; cursor: pointer; }
         .c-btn svg { width: 28px; height: 28px; fill: currentColor; }
         .play-btn { width: 60px; height: 60px; border-radius: 50%; background: #fff; color: #000; display: flex; align-items: center; justify-content: center; }
         .play-btn svg { fill: #000; width: 30px; height: 30px; }
-        .playlist-section { padding: 20px 0; margin-top: auto; }
+        
+        .playlist-section { padding: 20px 0; margin-top: auto; z-index: 5; }
         .playlist-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 24px; scrollbar-width: none; }
-        .list-item { flex: 0 0 90px; cursor: pointer; }
-        .item-thumb { width: 90px; height: 90px; border-radius: 6px; object-fit: cover; opacity: 0.5; transition: 0.3s; }
-        .list-item.active .item-thumb { opacity: 1; border: 2px solid var(--spotify-green); }
+        .list-item { flex: 0 0 80px; cursor: pointer; }
+        .item-thumb { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; opacity: 0.5; transition: 0.3s; border: 2px solid transparent; }
+        .list-item.active .item-thumb { opacity: 1; border-color: var(--spotify-green); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -53,40 +51,40 @@
     <div class="dynamic-bg" id="bgLayer"></div>
     <div class="app">
         <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="Mahnı adı yazın..." autocomplete="off">
+            <input type="text" id="searchInput" class="search-input" placeholder="Mahnı adı yazın (Məs: Alizade)..." autocomplete="off">
             <div id="searchResults" class="search-results"></div>
         </div>
-        <header class="top-bar">
-            <div class="header-profile">
-                <img class="profile-img" src="https://i.ibb.co/DfTfD2wV/MG-0476.png">
-                <div style="font-size: 10px; margin-left: 5px;">@ryhavean</div>
-            </div>
-        </header>
+
         <main class="main-content">
-            <div class="album-cover-container"><img id="mainArt" class="album-img" src=""></div>
+            <div class="album-cover-container"><img id="mainArt" class="album-img" src="https://i.ibb.co/DfTfD2wV/MG-0476.png"></div>
             <div class="song-info-row">
-                <div style="overflow: hidden;">
-                    <div class="song-title" id="songTitle">Yüklənir...</div>
-                    <div class="artist-name" id="artistName">YouTube</div>
+                <div style="overflow: hidden; flex: 1;">
+                    <div class="song-title" id="songTitle">Mahnı axtarın</div>
+                    <div class="artist-name" id="artistName">ryhavean player</div>
                 </div>
-                <button class="heart-btn" onclick="this.classList.toggle('liked')"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.27 2 8.5 2 5.41 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.41 22 8.5c0 3.77-3.4 6.86-8.55 11.53L12 21.35z"/></svg></button>
+                <button class="c-btn" style="color: var(--text-secondary);" onclick="this.style.color = this.style.color === 'red' ? 'white' : 'red'">
+                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.27 2 8.5 2 5.41 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.41 22 8.5c0 3.77-3.4 6.86-8.55 11.53L12 21.35z"/></svg>
+                </button>
             </div>
-            <div class="controls-wrapper">
-                <div class="progress-rail" id="progRail"><div class="progress-fill" id="progFill"></div></div>
-                <div class="time-labels"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
-                <div class="btns-row">
-                    <button class="c-btn"><svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5z"/></svg></button>
-                    <button class="c-btn" onclick="prevT()"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-                    <button class="c-btn play-btn" id="playBtn">
-                        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    </button>
-                    <button class="c-btn" onclick="nextT()"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-                    <button class="c-btn"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
-                </div>
+
+            <div class="progress-rail" id="progRail"><div class="progress-fill" id="progFill"></div></div>
+            <div class="time-labels"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
+
+            <div class="btns-row">
+                <button class="c-btn"><svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+                <button class="c-btn" id="prevBtn"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                <button class="c-btn play-btn" id="playBtn">
+                    <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button class="c-btn" id="nextBtn"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+                <button class="c-btn"><svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41z"/></svg></button>
             </div>
         </main>
-        <div class="playlist-section"><div class="playlist-scroll" id="scrollContainer"></div></div>
+
+        <div class="playlist-section">
+            <div class="playlist-scroll" id="scrollContainer"></div>
+        </div>
     </div>
 
     <script>
@@ -95,58 +93,80 @@
         const searchInput = document.getElementById('searchInput');
         const resultsBox = document.getElementById('searchResults');
 
-        // Axtarış üçün ən sürətli API
-        async function search(q) {
-            const r = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(q)}&filter=music_songs`);
-            return await r.json();
+        // TELEGRAM BOTLARI KİMİ İŞLƏYƏN AXTARIŞ (En stabil Piped instance-ları)
+        async function fetchSearch(q) {
+            const instances = [
+                'https://pipedapi.kavin.rocks',
+                'https://api.piped.victr.me',
+                'https://pipedapi.leptons.xyz'
+            ];
+            
+            for (let url of instances) {
+                try {
+                    const res = await fetch(`${url}/search?q=${encodeURIComponent(q)}&filter=music_songs`);
+                    if (res.ok) return await res.json();
+                } catch (e) { continue; }
+            }
         }
 
-        searchInput.addEventListener('input', async (e) => {
-            const val = e.target.value;
-            if (val.length < 2) { resultsBox.style.display = 'none'; return; }
-            const data = await search(val);
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const q = e.target.value;
+            if (q.length < 2) { resultsBox.style.display = 'none'; return; }
+            
+            resultsBox.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:gray;">Axtarılır...</div>';
+            resultsBox.style.display = 'block';
+
+            const data = await fetchSearch(q);
+            if (!data || !data.items) return;
+
             resultsBox.innerHTML = '';
-            data.items.slice(0, 10).forEach(i => {
-                const d = document.createElement('div');
-                d.className = 'search-item';
-                const vidId = i.url.split('=')[1];
-                d.innerHTML = `<img src="${i.thumbnail}"><div class="search-item-info"><div class="search-item-title">${i.title}</div><div class="search-item-artist">${i.uploaderName}</div></div>`;
-                d.onclick = () => {
-                    const track = { id: vidId, title: i.title, artist: i.uploaderName, cover: i.thumbnail };
-                    play(track);
+            data.items.slice(0, 10).forEach(item => {
+                const videoId = item.url.split('=')[1];
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.innerHTML = `
+                    <img src="${item.thumbnail}">
+                    <div class="search-item-info">
+                        <div class="search-item-title">${item.title}</div>
+                        <div class="search-item-artist">${item.uploaderName}</div>
+                    </div>`;
+                div.onclick = () => {
+                    play({ id: videoId, title: item.title, artist: item.uploaderName, cover: item.thumbnail });
                     resultsBox.style.display = 'none';
                     searchInput.value = '';
                 };
-                resultsBox.appendChild(d);
+                resultsBox.appendChild(div);
             });
-            resultsBox.style.display = 'block';
-        });
+        }, 500));
 
-        async function play(track) {
+        function play(track) {
             if (!queue.find(t => t.id === track.id)) queue.push(track);
             index = queue.findIndex(t => t.id === track.id);
             
-            // Audio Stream - Direct Google Video Link
+            audio.pause();
+            // Ən stabil səs serveri
             audio.src = `https://invidious.sethforprivacy.com/latest_version?id=${track.id}&itag=140`;
+            
             document.getElementById('mainArt').src = track.cover;
             document.getElementById('songTitle').textContent = track.title;
             document.getElementById('artistName').textContent = track.artist;
             
             audio.play().then(() => sync(true)).catch(() => sync(false));
-            updateList();
-            updateBg();
+            updateUI();
         }
 
-        function updateList() {
-            const c = document.getElementById('scrollContainer');
-            c.innerHTML = '';
+        function updateUI() {
+            const scroll = document.getElementById('scrollContainer');
+            scroll.innerHTML = '';
             queue.forEach((t, i) => {
-                const d = document.createElement('div');
-                d.className = `list-item ${i === index ? 'active' : ''}`;
-                d.innerHTML = `<img class="item-thumb" src="${t.cover}">`;
-                d.onclick = () => play(t);
-                c.appendChild(d);
+                const item = document.createElement('div');
+                item.className = `list-item ${i === index ? 'active' : ''}`;
+                item.innerHTML = `<img class="item-thumb" src="${t.cover}">`;
+                item.onclick = () => play(t);
+                scroll.appendChild(item);
             });
+            const h = (index * 137) % 360;
+            document.getElementById('bgLayer').style.background = `linear-gradient(180deg, hsl(${h}, 25%, 20%) 0%, #121212 100%)`;
         }
 
         function sync(p) {
@@ -155,26 +175,28 @@
         }
 
         document.getElementById('playBtn').onclick = () => audio.paused ? (audio.play(), sync(true)) : (audio.pause(), sync(false));
-        window.nextT = () => queue.length > 1 && play(queue[(index + 1) % queue.length]);
-        window.prevT = () => queue.length > 1 && play(queue[(index - 1 + queue.length) % queue.length]);
-        
+        document.getElementById('nextBtn').onclick = () => queue.length > 1 && play(queue[(index + 1) % queue.length]);
+        document.getElementById('prevBtn').onclick = () => queue.length > 1 && play(queue[(index - 1 + queue.length) % queue.length]);
+
         audio.ontimeupdate = () => {
             document.getElementById('progFill').style.width = (audio.currentTime / audio.duration * 100 || 0) + '%';
             document.getElementById('curTime').textContent = format(audio.currentTime);
         };
         audio.onloadedmetadata = () => document.getElementById('durTime').textContent = format(audio.duration);
-        audio.onended = () => nextT();
-        
-        function format(s) { const m = Math.floor(s/60); const ss = Math.floor(s%60); return m + ":" + (ss<10?"0":"") + ss; }
-        function updateBg() { const h = (index * 137) % 360; document.getElementById('bgLayer').style.background = `linear-gradient(180deg, hsl(${h}, 20%, 20%) 0%, #121212 100%)`; }
-        
-        document.addEventListener('click', (e) => { if (!e.target.closest('.search-container')) resultsBox.style.display = 'none'; });
+        audio.onended = () => document.getElementById('nextBtn').click();
 
-        // İlk yüklənəndə trend mahnılar
+        function format(s) { const m = Math.floor(s/60); const ss = Math.floor(s%60); return m + ":" + (ss<10?"0":"") + ss; }
+        function debounce(func, wait) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); }; }
+
+        document.addEventListener('click', e => { if (!e.target.closest('.search-container')) resultsBox.style.display = 'none'; });
+
+        // Açılışda trend mahnılar
         window.onload = async () => {
-            const data = await search('trending songs');
-            queue = data.items.slice(0, 5).map(i => ({ id: i.url.split('=')[1], title: i.title, artist: i.uploaderName, cover: i.thumbnail }));
-            play(queue[0]); audio.pause(); sync(false);
+            const data = await fetchSearch('trend music 2026');
+            if (data && data.items) {
+                queue = data.items.slice(0, 5).map(i => ({ id: i.url.split('=')[1], title: i.title, artist: i.uploaderName, cover: i.thumbnail }));
+                play(queue[0]); audio.pause(); sync(false);
+            }
         };
     </script>
 </body>
