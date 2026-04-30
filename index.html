@@ -109,7 +109,7 @@
         .search-item-info { overflow: hidden; flex: 1; min-width: 0; }
         .search-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .search-item-artist { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
+
         .top-bar { display: flex; align-items: center; justify-content: center; padding: 8px 20px; flex-shrink: 0; }
         .header-profile { display: flex; align-items: center; gap: 10px; }
         .profile-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
@@ -120,6 +120,7 @@
         .album-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .song-info-row { display: flex; align-items: center; justify-content: space-between; margin-top: 25px; }
+        .song-info { overflow: hidden; margin-right: 10px; }
         .song-title { font-size: 20px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .artist-name { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -130,7 +131,7 @@
 
         .controls-wrapper { margin-top: 20px; }
         .progress-rail { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; position: relative; }
-        .progress-fill { height: 100%; width: 0%; background: #fff; border-radius: 2px; }
+        .progress-fill { height: 100%; width: 0%; background: #fff; border-radius: 2px; transition: width 0.1s linear; }
         .time-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
 
         .btns-row { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
@@ -144,7 +145,7 @@
         .playlist-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 24px; scrollbar-width: none; }
         .list-item { flex: 0 0 90px; cursor: pointer; }
         .item-thumb { width: 90px; height: 90px; border-radius: 6px; object-fit: cover; opacity: 0.4; transition: 0.3s; }
-        .list-item.active .item-thumb { opacity: 1; border: 2px solid var(--spotify-green); }
+        .list-item.active .item-thumb { opacity: 1; transform: scale(1.05); border: 2px solid var(--spotify-green); }
 
         .hidden { display: none !important; }
     </style>
@@ -173,7 +174,7 @@
             </div>
 
             <div class="song-info-row">
-                <div class="song-info" style="overflow:hidden;">
+                <div class="song-info">
                     <div class="song-title" id="songTitle">Mahnı seçilməyib</div>
                     <div class="artist-name" id="artistName">Axtarış edin</div>
                 </div>
@@ -209,52 +210,65 @@
     <script>
         let currentQueue = [], currentIdx = 0;
         const audio = new Audio();
+        
+        // --- Stabil Server Siyahısı ---
+        const pipedAPIs = [
+            'https://pipedapi.kavin.rocks',
+            'https://api.piped.victr.me',
+            'https://pipedapi.lunar.icu'
+        ];
+        
+        const invidiousAPIs = [
+            'https://invidious.sethforprivacy.com',
+            'https://inv.tux.pizza',
+            'https://invidious.snopyta.org'
+        ];
+
         const searchInput = document.getElementById('searchInput');
         const searchResultsDiv = document.getElementById('searchResults');
-        
-        // --- YouTube (Invidious/Piped) Search Logic ---
+
+        async function fetchSearch(query) {
+            for (let api of pipedAPIs) {
+                try {
+                    const res = await fetch(`${api}/search?q=${encodeURIComponent(query)}&filter=music_songs`);
+                    if (res.ok) return await res.json();
+                } catch (e) { continue; }
+            }
+            throw new Error("API error");
+        }
+
         async function performSearch(query) {
             searchResultsDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#B3B3B3;">Axtarılır...</div>';
             searchResultsDiv.style.display = 'block';
             try {
-                // Stabil YouTube Proxy API
-                const res = await fetch(`https://pipedapi.kavin.rocks/search?q=${encodeURIComponent(query)}&filter=music_songs`);
-                const data = await res.json();
-                
+                const data = await fetchSearch(query);
                 if (!data.items || data.items.length === 0) {
-                    searchResultsDiv.innerHTML = '<div style="padding:20px; text-align:center;">Nəticə tapılmadı.</div>';
+                    searchResultsDiv.innerHTML = '<div style="padding:20px; text-align:center;">Tapılmadı.</div>';
                     return;
                 }
-                
                 searchResultsDiv.innerHTML = '';
                 data.items.slice(0, 10).forEach(item => {
                     const videoId = item.url.split('=')[1];
                     const div = document.createElement('div');
                     div.className = 'search-item';
-                    div.innerHTML = `
-                        <img src="${item.thumbnail}">
-                        <div class="search-item-info">
-                            <div class="search-item-title">${item.title}</div>
-                            <div class="search-item-artist">${item.uploaderName}</div>
-                        </div>`;
+                    div.innerHTML = `<img src="${item.thumbnail}"><div class="search-item-info"><div class="search-item-title">${item.title}</div><div class="search-item-artist">${item.uploaderName}</div></div>`;
                     div.onclick = () => {
-                        const track = { id: videoId, title: item.title, artist: item.uploaderName, cover: item.thumbnail };
-                        addToQueueAndPlay(track);
+                        addToQueueAndPlay({ id: videoId, title: item.title, artist: item.uploaderName, cover: item.thumbnail });
                         searchResultsDiv.style.display = 'none';
                         searchInput.value = '';
                     };
                     searchResultsDiv.appendChild(div);
                 });
             } catch (err) {
-                searchResultsDiv.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Bağlantı xətası.</div>';
+                searchResultsDiv.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Bağlantı xətası. Yenidən yoxla.</div>';
             }
         }
 
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
+        let timeout;
+        searchInput.addEventListener('input', e => {
+            clearTimeout(timeout);
             if (e.target.value.length < 2) return searchResultsDiv.style.display = 'none';
-            searchTimeout = setTimeout(() => performSearch(e.target.value), 500);
+            timeout = setTimeout(() => performSearch(e.target.value), 500);
         });
 
         function addToQueueAndPlay(track) {
@@ -265,11 +279,14 @@
 
         function loadTrack(idx) {
             const track = currentQueue[idx];
-            // Stabil YouTube Audio Stream Server
-            audio.src = `https://invidious.sethforprivacy.com/latest_version?id=${track.id}&itag=140`;
+            // Dinamik Audio Stream
+            const streamBase = invidiousAPIs[idx % invidiousAPIs.length];
+            audio.src = `${streamBase}/latest_version?id=${track.id}&itag=140`;
+            
             document.getElementById('mainArt').src = track.cover;
             document.getElementById('songTitle').textContent = track.title;
             document.getElementById('artistName').textContent = track.artist;
+            
             audio.play().then(() => syncPlay(true)).catch(() => syncPlay(false));
             renderQueue();
             updateBG(idx);
@@ -304,8 +321,7 @@
         audio.onended = () => document.getElementById('nextBtn').click();
 
         function fmt(s) { const m = Math.floor(s/60); const ss = Math.floor(s%60); return m+":"+(ss<10?"0":"")+ss; }
-        function updateBG(idx) { document.getElementById('bgLayer').style.background = `linear-gradient(180deg, hsl(${(idx*137)%360}, 20%, 20%) 0%, #121212 100%)`; }
-
+        function updateBG(idx) { document.getElementById('bgLayer').style.background = `linear-gradient(180deg, hsl(${(idx*137)%360}, 25%, 20%) 0%, #121212 100%)`; }
         document.addEventListener('click', e => { if (!e.target.closest('.search-container')) searchResultsDiv.style.display = 'none'; });
     </script>
 </body>
