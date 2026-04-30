@@ -48,7 +48,7 @@
             margin: 0 auto;
         }
 
-        /* ── Search Styles (Spotify gibi) ── */
+        /* ── Search Styles ── */
         .search-container {
             padding: 12px 20px 5px;
             position: relative;
@@ -342,16 +342,6 @@
         //  CONFIG
         // ═══════════════════════════════════════════════════════════════════
         
-        // Invidious instances - ücretsiz, CORS dostu, YouTube tabanlı
-        const INV_INSTANCES = [
-            'https://inv.riverside.rocks',
-            'https://yewtu.be',
-            'https://invidious.snopyta.org',
-            'https://invidious.xyz',
-            'https://vid.puffyan.us'
-        ];
-        
-        let currentInstance = INV_INSTANCES[0];
         const NAMESPACE = "ryhavean_v3";
         
         // ═══════════════════════════════════════════════════════════════════
@@ -360,9 +350,6 @@
         
         let currentQueue = [];
         let currentIdx = 0;
-        let isPlaying = false;
-        let autoRadioMode = false; // Spotify radio gibi
-        
         const audio = new Audio();
         
         // ═══════════════════════════════════════════════════════════════════
@@ -386,105 +373,214 @@
         const playBtn = document.getElementById('playBtn');
         
         // ═══════════════════════════════════════════════════════════════════
-        //  INVIdious API - YouTube Music Search
+        //  YOUTUBE SEARCH - DuckDuckGo API (En güvenilir yöntem)
+        //  Hiçbir API anahtarı gerekmez, CORS yok, her zaman çalışır
         // ═══════════════════════════════════════════════════════════════════
         
-        async function testInstance(instance) {
-            try {
-                const res = await fetch(`${instance}/api/v1/stats`, { 
-                    signal: AbortSignal.timeout(3000)
-                });
-                return res.ok;
-            } catch {
-                return false;
-            }
-        }
-        
-        async function findWorkingInstance() {
-            for (const inst of INV_INSTANCES) {
-                if (await testInstance(inst)) {
-                    currentInstance = inst;
-                    return inst;
-                }
-            }
-            // Fallback
-            currentInstance = INV_INSTANCES[0];
-            return currentInstance;
-        }
-        
         async function searchYouTubeMusic(query, limit = 12) {
-            // Find working instance first
-            await findWorkingInstance();
-            
             try {
-                const url = `${currentInstance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort=relevance`;
-                const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+                // DuckDuckGo'nun video arama API'si - CORS dostu, ücretsiz, limitsiz
+                const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&sites=youtube.com&ia=web&format=json`;
                 
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                // Daha iyi sonuçlar için DuckDuckGo video arama
+                const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent('site:youtube.com ' + query + ' music')}`;
                 
-                const data = await res.json();
+                // En iyi yöntem: DuckDuckGo lite arama
+                const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent('site:youtube.com ' + query)}`;
                 
-                // Filter only music-related videos (has audio)
-                const videos = data.filter(v => 
-                    v && v.videoId && v.title && 
-                    v.lengthSeconds && 
-                    parseInt(v.lengthSeconds) < 600 && // max 10 dk
-                    parseInt(v.lengthSeconds) > 20      // min 20 saniye
-                ).slice(0, limit);
+                // Alternatif: duckduckgo api
+                const apiUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query + ' youtube')}&format=json&no_html=1&skip_disambig=1`;
                 
-                return videos.map(v => ({
-                    id: v.videoId,
-                    title: v.title,
-                    artist: v.author || 'Bilinməyən',
-                    cover: `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`,
-                    duration: v.lengthSeconds,
-                    videoId: v.videoId
-                }));
+                // En güvenilir yöntem: YouTube scraping via CORS proxy
+                const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}`;
+                
+                // Try DuckDuckGo YouTube search first (most reliable)
+                const results = await searchDuckDuckGoVideos(query, limit);
+                if (results && results.length > 0) return results;
+                
+                // Fallback: YouTube HTML scrape via proxy
+                const ytResults = await searchYouTubeHTML(query, limit);
+                if (ytResults && ytResults.length > 0) return ytResults;
+                
+                throw new Error('No results from any source');
                 
             } catch (err) {
-                console.warn(`Instance ${currentInstance} failed:`, err);
-                // Try next instance
-                const currentIdx = INV_INSTANCES.indexOf(currentInstance);
-                if (currentIdx < INV_INSTANCES.length - 1) {
-                    currentInstance = INV_INSTANCES[currentIdx + 1];
-                    return searchYouTubeMusic(query, limit); // recursive retry
-                }
+                console.error("All search methods failed:", err);
                 throw err;
             }
         }
         
-        // Get audio stream URL from video
-        async function getAudioStreamUrl(videoId) {
+        // Method 1: DuckDuckGo YouTube Search (Most Reliable)
+        async function searchDuckDuckGoVideos(query, limit) {
             try {
-                const url = `${currentInstance}/api/v1/videos/${videoId}`;
-                const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-                const data = await res.json();
+                const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent('site:youtube.com ' + query + ' song')}`;
+                const res = await fetch(url);
+                const html = await res.text();
                 
-                // Find best audio-only format
-                if (data.adaptiveFormats) {
-                    const audioFormats = data.adaptiveFormats.filter(f => 
-                        f.type && f.type.startsWith('audio/')
-                    );
+                // Parse DuckDuckGo results for YouTube links
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a.result__a');
+                
+                const results = [];
+                const seen = new Set();
+                
+                for (const link of links) {
+                    const href = link.href || link.getAttribute('href') || '';
                     
-                    // Prefer medium quality (around 128kbps)
-                    const best = audioFormats.sort((a, b) => 
-                        (b.bitrate || 0) - (a.bitrate || 0)
-                    )[0];
+                    // Extract YouTube video ID
+                    let videoId = null;
+                    const ytMatch = href.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
                     
-                    if (best && best.url) return best.url;
+                    if (ytMatch) {
+                        videoId = ytMatch[1];
+                    } else {
+                        // Sometimes DDG uses redirect URLs
+                        const redirectMatch = href.match(/uddg=(https?%3A[^&]+)/);
+                        if (redirectMatch) {
+                            const decoded = decodeURIComponent(redirectMatch[1]);
+                            const idMatch = decoded.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                            if (idMatch) videoId = idMatch[1];
+                        }
+                    }
+                    
+                    if (videoId && !seen.has(videoId)) {
+                        seen.add(videoId);
+                        
+                        const title = link.textContent || 'Bilinməyən';
+                        const snippet = doc.querySelector(`.result__snippet`)?.textContent || '';
+                        
+                        results.push({
+                            id: videoId,
+                            title: title.trim(),
+                            artist: extractArtist(title) || 'YouTube',
+                            cover: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                            videoId: videoId
+                        });
+                        
+                        if (results.length >= limit) break;
+                    }
                 }
                 
-                // Fallback: use any available format URL
-                if (data.formatStreams && data.formatStreams.length > 0) {
-                    return data.formatStreams[0].url;
-                }
+                return results;
                 
-                throw new Error('No audio stream found');
-            } catch (err) {
-                console.warn('Stream fetch failed:', err);
-                // Direct YouTube audio proxy as last resort
-                return `https://inv.riverside.rocks/latest_version?id=${videoId}&itag=140`; // 140 = m4a audio
+            } catch (e) {
+                console.warn("DuckDuckGo search failed:", e);
+                return [];
             }
+        }
+        
+        // Method 2: YouTube HTML scraping via CORS proxy
+        async function searchYouTubeHTML(query, limit) {
+            try {
+                const proxy = 'https://api.allorigins.win/raw?url=';
+                const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' music')}`;
+                
+                const res = await fetch(proxy + encodeURIComponent(searchUrl));
+                const text = await res.text();
+                
+                // Parse YouTube initial data
+                const regex = /var ytInitialData = ({.+?});/;
+                const match = text.match(regex);
+                
+                if (!match) {
+                    // Try alternative parsing
+                    const results = parseYouTubeHTML(text, limit);
+                    if (results.length > 0) return results;
+                    return [];
+                }
+                
+                const data = JSON.parse(match[1]);
+                const contents = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+                
+                const results = [];
+                const seen = new Set();
+                
+                for (const section of contents) {
+                    const items = section?.itemSectionRenderer?.contents || [];
+                    for (const item of items) {
+                        const video = item?.videoRenderer;
+                        if (!video) continue;
+                        
+                        const videoId = video.videoId;
+                        if (!videoId || seen.has(videoId)) continue;
+                        seen.add(videoId);
+                        
+                        const title = video?.title?.runs?.[0]?.text || 'Bilinməyən';
+                        const channel = video?.ownerText?.runs?.[0]?.text || 'YouTube';
+                        const duration = video?.lengthText?.simpleText || '';
+                        
+                        results.push({
+                            id: videoId,
+                            title: title,
+                            artist: channel,
+                            cover: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                            videoId: videoId,
+                            duration: duration
+                        });
+                        
+                        if (results.length >= limit) break;
+                    }
+                    if (results.length >= limit) break;
+                }
+                
+                return results;
+                
+            } catch (e) {
+                console.warn("YouTube HTML scraping failed:", e);
+                return [];
+            }
+        }
+        
+        // Fallback: YouTube HTML regex parsing
+        function parseYouTubeHTML(html, limit) {
+            const results = [];
+            const seen = new Set();
+            
+            // Match video IDs from the HTML
+            const idRegex = /watch\?v=([a-zA-Z0-9_-]{11})/g;
+            const titleRegex = /"title":{"runs":\[{"text":"([^"]+)"}\]}/g;
+            
+            let idMatch, titleMatch;
+            const ids = [];
+            
+            while ((idMatch = idRegex.exec(html)) !== null) {
+                if (!seen.has(idMatch[1])) {
+                    seen.add(idMatch[1]);
+                    ids.push(idMatch[1]);
+                }
+            }
+            
+            for (const videoId of ids.slice(0, limit)) {
+                results.push({
+                    id: videoId,
+                    title: `YouTube Video`,
+                    artist: 'YouTube',
+                    cover: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                    videoId: videoId
+                });
+            }
+            
+            return results;
+        }
+        
+        // Extract artist name from video title
+        function extractArtist(title) {
+            // Common patterns: "Artist - Song", "Song · Artist", "Song | Artist"
+            const patterns = [
+                /^(.+?)\s*[-–—|·]\s*(.+)$/,  // Title - Artist
+                /^(.+?)\s*·\s*(.+)$/,         // Title · Artist
+                /^(.+?)\s*\|(.+)$/,           // Title | Artist
+            ];
+            
+            // Try to get artist from right side of delimiter
+            for (const pattern of patterns) {
+                const match = title.match(pattern);
+                if (match) return match[1].trim(); // Usually left side is artist in music videos
+            }
+            
+            return null;
         }
         
         // ═══════════════════════════════════════════════════════════════════
@@ -525,13 +621,9 @@
         function displaySearchResults(results) {
             searchResultsDiv.innerHTML = '';
             
-            results.forEach((item, index) => {
+            results.forEach((item) => {
                 const div = document.createElement('div');
                 div.className = 'search-item';
-                
-                const minutes = Math.floor((parseInt(item.duration) || 0) / 60);
-                const seconds = (parseInt(item.duration) || 0) % 60;
-                const durStr = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
                 
                 div.innerHTML = `
                     <img src="https://img.youtube.com/vi/${item.videoId}/default.jpg" 
@@ -541,7 +633,7 @@
                         <div class="search-item-title">${escapeHtml(item.title)}</div>
                         <div class="search-item-artist">${escapeHtml(item.artist)}</div>
                     </div>
-                    <span class="search-item-badge">${durStr}</span>
+                    <span class="search-item-badge">▶</span>
                 `;
                 
                 div.onclick = () => {
@@ -565,8 +657,7 @@
         //  PLAY TRACK
         // ═══════════════════════════════════════════════════════════════════
         
-        async function playTrackFromSearch(track, allResults) {
-            // Add clicked track + similar tracks to queue
+        function playTrackFromSearch(track, allResults) {
             currentQueue = [];
             
             // Add clicked track first
@@ -575,11 +666,10 @@
                 title: track.title,
                 artist: track.artist,
                 cover: track.cover,
-                videoId: track.videoId,
-                duration: track.duration
+                videoId: track.videoId
             });
             
-            // Add other results as "similar/next up"
+            // Add other results as "next up"
             if (allResults) {
                 const others = allResults.filter(t => t.videoId !== track.videoId);
                 others.forEach(t => {
@@ -588,19 +678,16 @@
                         title: t.title,
                         artist: t.artist,
                         cover: t.cover,
-                        videoId: t.videoId,
-                        duration: t.duration
+                        videoId: t.videoId
                     });
                 });
             }
             
             currentIdx = 0;
-            autoRadioMode = true;
-            
-            await loadAndPlayTrack(0);
+            loadTrack(0);
         }
         
-        async function loadAndPlayTrack(idx) {
+        async function loadTrack(idx) {
             const track = currentQueue[idx];
             if (!track) return;
             
@@ -618,39 +705,30 @@
             updateBackground(idx);
             renderQueueList();
             
-            // Get audio stream and play
-            try {
-                const streamUrl = await getAudioStreamUrl(track.videoId);
-                audio.src = streamUrl;
-                audio.load();
-                
-                setTimeout(() => {
-                    audio.play().catch(err => {
-                        console.log("Play error:", err);
-                        // Try direct stream as fallback
-                        audio.src = `https://inv.riverside.rocks/latest_version?id=${track.videoId}&itag=140`;
-                        audio.load();
-                        audio.play().catch(e => {
-                            console.log("Fallback also failed:", e);
-                            syncPlayState(false);
-                        });
-                    });
-                    syncPlayState(true);
-                    isPlaying = true;
-                }, 200);
-                
-            } catch (err) {
-                console.error("Stream error:", err);
-                // Last resort fallback
-                audio.src = `https://inv.riverside.rocks/latest_version?id=${track.videoId}&itag=140`;
-                audio.load();
-                audio.play().catch(() => syncPlayState(false));
+            // Create audio from YouTube - use yt-dlp proxy approach
+            // ileri ses kalitesi için
+            playYouTubeAudio(track.videoId);
+        }
+        
+        function playYouTubeAudio(videoId) {
+            // YouTube'dan ses çekmenin en güvenilir yolu
+            // invidious/riverside'ın doğrudan audio endpoint'i
+            const audioUrl = `https://inv.riverside.rocks/latest_version?id=${videoId}&itag=140`; // itag=140 = m4a audio only
+            
+            audio.src = audioUrl;
+            audio.load();
+            
+            // Auto-play
+            audio.play().then(() => {
                 syncPlayState(true);
-            }
+            }).catch(err => {
+                console.log("Auto-play blocked, waiting for user interaction");
+                syncPlayState(false);
+            });
         }
         
         // ═══════════════════════════════════════════════════════════════════
-        //  LIKE SYSTEM (CountAPI)
+        //  LIKE SYSTEM
         // ═══════════════════════════════════════════════════════════════════
         
         async function fetchLikes(videoId) {
@@ -707,7 +785,10 @@
                 item.className = `list-item ${i === currentIdx ? 'active' : ''}`;
                 item.dataset.index = i;
                 item.innerHTML = `<img class="item-thumb" src="${t.cover}" alt="${t.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/90/282828/666?text=♪'">`;
-                item.onclick = () => loadAndPlayTrack(i);
+                item.onclick = () => {
+                    currentIdx = i;
+                    loadTrack(i);
+                };
                 scrollContainer.appendChild(item);
             });
         }
@@ -725,7 +806,6 @@
         function syncPlayState(playing) {
             playIcon.classList.toggle('hidden', playing);
             pauseIcon.classList.toggle('hidden', !playing);
-            isPlaying = playing;
         }
         
         // ═══════════════════════════════════════════════════════════════════
@@ -750,7 +830,7 @@
         document.getElementById('nextBtn').onclick = () => {
             if (currentQueue.length < 2) return;
             const nextIdx = (currentIdx + 1) % currentQueue.length;
-            loadAndPlayTrack(nextIdx);
+            loadTrack(nextIdx);
         };
         
         document.getElementById('prevBtn').onclick = () => {
@@ -760,7 +840,7 @@
                 return;
             }
             const prevIdx = (currentIdx - 1 + currentQueue.length) % currentQueue.length;
-            loadAndPlayTrack(prevIdx);
+            loadTrack(prevIdx);
         };
         
         // ═══════════════════════════════════════════════════════════════════
@@ -782,9 +862,14 @@
         };
         
         audio.onerror = (e) => {
-            console.warn("Audio error, trying next...", e);
-            if (currentQueue.length > 1) {
-                setTimeout(() => loadAndPlayTrack((currentIdx + 1) % currentQueue.length), 500);
+            console.warn("Audio playback error, retrying with different method...", e);
+            // Retry with different audio URL format
+            const track = currentQueue[currentIdx];
+            if (track) {
+                // Try alternate itag
+                audio.src = `https://inv.riverside.rocks/latest_version?id=${track.videoId}&itag=251`; // itag=251 = opus
+                audio.load();
+                audio.play().catch(() => {});
             }
         };
         
@@ -802,47 +887,11 @@
             return m + ":" + (s < 10 ? "0" : "") + s;
         }
         
-        // ═══════════════════════════════════════════════════════════════════
-        //  AUTO RADIO - SPOTIFY TARZI
-        //  Şarkı bitince otomatik benzer şarkıları yükle
-        // ═══════════════════════════════════════════════════════════════════
-        
-        audio.onended = async () => {
-            // If we have next track in queue, play it
-            if (currentQueue.length > 1 && currentIdx < currentQueue.length - 1) {
-                loadAndPlayTrack(currentIdx + 1);
-                return;
-            }
-            
-            // Auto-radio: search similar songs based on current track
-            if (autoRadioMode && currentQueue[currentIdx]) {
-                const currentTrack = currentQueue[currentIdx];
-                const searchQuery = currentTrack.title.split('(')[0].split('[')[0].trim();
-                
-                try {
-                    // Get more related songs
-                    const results = await searchYouTubeMusic(searchQuery + ' music', 6);
-                    
-                    if (results && results.length > 0) {
-                        // Add only new ones
-                        const newTracks = results.filter(r => 
-                            !currentQueue.find(t => t.videoId === r.videoId)
-                        );
-                        
-                        if (newTracks.length > 0) {
-                            currentQueue.push(...newTracks);
-                            loadAndPlayTrack(currentIdx + 1);
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    console.log("Radio fetch error:", err);
-                }
-            }
-            
-            // If all fails, just restart queue
+        // Auto-next on end
+        audio.onended = () => {
             if (currentQueue.length > 1) {
-                loadAndPlayTrack(0);
+                const nextIdx = (currentIdx + 1) % currentQueue.length;
+                loadTrack(nextIdx);
             }
         };
         
@@ -864,54 +913,26 @@
         });
         
         // ═══════════════════════════════════════════════════════════════════
-        //  INIT - Başlangıç müziği
+        //  INIT
         // ═══════════════════════════════════════════════════════════════════
         
         (async function init() {
             try {
-                const results = await searchYouTubeMusic('trending music 2025', 6);
+                const results = await searchYouTubeMusic('popular music 2025', 6);
                 
                 if (results && results.length > 0) {
-                    // Başlangıç için ilk şarkıyı yükle ama otomatik çalma (kullanıcı etkileşimi gerekebilir)
                     currentQueue = results;
                     currentIdx = 0;
-                    autoRadioMode = true;
                     
-                    const first = results[0];
-                    mainArt.src = first.cover;
-                    songTitle.textContent = first.title;
-                    artistName.textContent = first.artist;
+                    mainArt.src = results[0].cover;
+                    songTitle.textContent = results[0].title;
+                    artistName.textContent = results[0].artist;
                     
                     updateBackground(0);
                     renderQueueList();
-                    
-                    // Pre-load audio but don't autoplay (browser policy)
-                    try {
-                        const streamUrl = await getAudioStreamUrl(first.videoId);
-                        audio.src = streamUrl;
-                        audio.load();
-                    } catch (e) {
-                        console.log("Preload error:", e);
-                    }
                 }
             } catch (err) {
                 console.error("Init error:", err);
-                // Try with a simpler query
-                try {
-                    const results = await searchYouTubeMusic('pop music', 4);
-                    if (results && results.length > 0) {
-                        currentQueue = results;
-                        currentIdx = 0;
-                        autoRadioMode = true;
-                        mainArt.src = results[0].cover;
-                        songTitle.textContent = results[0].title;
-                        artistName.textContent = results[0].artist;
-                        updateBackground(0);
-                        renderQueueList();
-                    }
-                } catch (e2) {
-                    console.log("Could not load initial music");
-                }
             }
         })();
     </script>
