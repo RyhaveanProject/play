@@ -5,148 +5,151 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#121212" />
     <title>ryhavean · spotify</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet" />
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        :root { --spotify-green: #1DB954; --spotify-black: #121212; --spotify-red: #e91429; --text-primary: #FFFFFF; --text-secondary: #B3B3B3; }
-        html, body { height: 100%; overflow: hidden; background: var(--spotify-black); color: var(--text-primary); font-family: 'Figtree', sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
-        .dynamic-bg { position: fixed; inset: 0; z-index: 0; background: linear-gradient(180deg, #333 0%, #121212 100%); transition: background 1s ease; }
-        .app { position: relative; z-index: 3; width: 100%; height: 100vh; display: flex; flex-direction: column; max-width: 400px; margin: 0 auto; }
-        .search-container { padding: 12px 20px 5px; position: relative; z-index: 10; }
-        .search-input { width: 100%; padding: 10px 16px 10px 40px; border-radius: 20px; border: none; background: rgba(255,255,255,0.08); color: white; outline: none; font-size: 14px; }
-        .search-icon { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.35); pointer-events: none; }
-        .search-results { position: absolute; top: 58px; left: 20px; right: 20px; background: #282828; border-radius: 12px; max-height: 350px; overflow-y: auto; display: none; box-shadow: 0 20px 50px rgba(0,0,0,0.7); z-index: 100; }
-        .search-item { display: flex; align-items: center; gap: 12px; padding: 8px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); }
-        .search-item img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; }
-        .search-item-info { overflow: hidden; flex: 1; }
+        :root { --spotify-green: #1DB954; --spotify-black: #121212; --text-primary: #FFFFFF; --text-secondary: #B3B3B3; }
+        body { background: var(--spotify-black); color: var(--text-primary); font-family: 'Figtree', sans-serif; height: 100vh; overflow: hidden; }
+        
+        .dynamic-bg { position: fixed; inset: 0; background: linear-gradient(180deg, #333 0%, #121212 100%); z-index: 0; transition: 1s; }
+        .app { position: relative; z-index: 1; max-width: 400px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+
+        .search-container { padding: 15px 20px; }
+        .search-input { width: 100%; padding: 12px 40px; border-radius: 25px; border: none; background: rgba(255,255,255,0.1); color: white; outline: none; }
+        .results-box { position: absolute; top: 65px; left: 20px; right: 20px; background: #282828; border-radius: 10px; max-height: 300px; overflow-y: auto; display: none; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .search-item { display: flex; align-items: center; gap: 12px; padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .search-item img { width: 45px; height: 45px; border-radius: 4px; }
+        .search-item-info { overflow: hidden; }
         .search-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .search-item-artist { font-size: 12px; color: var(--text-secondary); }
-        .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; }
-        .album-cover-container { width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
-        .album-img { width: 100%; height: 100%; object-fit: cover; }
-        .song-info-row { display: flex; align-items: center; justify-content: space-between; margin-top: 25px; }
-        .song-title { font-size: 20px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .artist-name { font-size: 14px; color: var(--text-secondary); }
-        .controls-wrapper { margin-top: 20px; }
-        .progress-rail { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; }
-        .progress-fill { height: 100%; width: 0%; background: #fff; border-radius: 2px; }
-        .time-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
-        .btns-row { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
-        .c-btn { background: none; border: none; color: #fff; cursor: pointer; }
-        .play-btn { width: 60px; height: 60px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; }
-        .playlist-section { padding: 20px 0; background: linear-gradient(180deg, transparent, rgba(0,0,0,0.5)); margin-top: auto; }
-        .playlist-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 24px; scrollbar-width: none; }
-        .list-item { flex: 0 0 90px; cursor: pointer; }
-        .item-thumb { width: 90px; height: 90px; border-radius: 6px; opacity: 0.4; }
-        .list-item.active .item-thumb { opacity: 1; border: 2px solid var(--spotify-green); }
-        .hidden { display: none !important; }
+
+        .player-main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 30px; text-align: center; }
+        .art-box { width: 100%; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 50px rgba(0,0,0,0.6); margin-bottom: 30px; }
+        .art-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .song-title { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
+        .artist-name { color: var(--text-secondary); font-size: 14px; margin-bottom: 25px; }
+
+        .progress-container { width: 100%; margin-bottom: 20px; }
+        .rail { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; cursor: pointer; }
+        .fill { height: 100%; background: #fff; width: 0%; border-radius: 2px; }
+        .times { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 8px; }
+
+        .controls { display: flex; justify-content: space-between; align-items: center; }
+        .btn { background: none; border: none; cursor: pointer; fill: white; opacity: 0.8; }
+        .play-btn { width: 65px; height: 65px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; fill: black; opacity: 1; }
+        
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="dynamic-bg" id="bgLayer"></div>
+    <div class="dynamic-bg" id="bg"></div>
     <div class="app">
         <div class="search-container">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" class="search-input" placeholder="Mahnı və ya müğənni axtar..." autocomplete="off">
-            <div id="searchResults" class="search-results"></div>
+            <input type="text" id="search" class="search-input" placeholder="Mahnı axtar...">
+            <div id="results" class="results-box"></div>
         </div>
-        <main class="main-content">
-            <div class="album-cover-container"><img id="mainArt" class="album-img" src="https://via.placeholder.com/400/222/fff?text=Music" alt="art"></div>
-            <div class="song-info-row">
-                <div class="song-info"><div class="song-title" id="songTitle">Mahnı seç</div><div class="artist-name" id="artistName">Axtarış bölməsindən istifadə et</div></div>
+
+        <div class="player-main">
+            <div class="art-box"><img id="mainArt" src="https://via.placeholder.com/400/222/555?text=ryhavean"></div>
+            <div class="song-title" id="title">Hazırsan?</div>
+            <div class="artist-name" id="artist">Axtarış bölməsindən mahnı seç</div>
+
+            <div class="progress-container">
+                <div class="rail" id="rail"><div class="fill" id="fill"></div></div>
+                <div class="times"><span id="cur">0:00</span><span id="dur">0:00</span></div>
             </div>
-            <div class="controls-wrapper">
-                <div class="progress-rail" id="progRail"><div class="progress-fill" id="progFill"></div></div>
-                <div class="time-labels"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
-                <div class="btns-row">
-                    <button class="c-btn" id="prevBtn"><svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-                    <button class="c-btn play-btn" id="playBtn">
-                        <svg id="playIcon" width="28" height="28" fill="black" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg id="pauseIcon" class="hidden" width="28" height="28" fill="black" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    </button>
-                    <button class="c-btn" id="nextBtn"><svg width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-                </div>
+
+            <div class="controls">
+                <button class="btn" id="prev"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+                <button class="btn play-btn" id="play">
+                    <svg id="p-on" width="30" height="30" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="p-off" class="hidden" width="30" height="30" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button class="btn" id="next"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
             </div>
-        </main>
-        <div class="playlist-section"><div class="playlist-scroll" id="scrollContainer"></div></div>
+        </div>
     </div>
 
     <script>
-        let queue = [], currentIdx = 0;
+        let playlist = [], index = 0;
         const audio = new Audio();
-        const searchInput = document.getElementById('searchInput');
-        const resultsDiv = document.getElementById('searchResults');
+        const searchInput = document.getElementById('search');
+        const resultsBox = document.getElementById('results');
 
-        // Sürətli axtarış üçün Apple Music API (Heç vaxt xəta vermir)
-        async function performSearch(q) {
-            resultsDiv.innerHTML = '<div style="padding:20px;text-align:center;">Axtarılır...</div>';
-            resultsDiv.style.display = 'block';
+        // Proxy vasitəsilə stabil axtarış
+        async function search(q) {
+            resultsBox.innerHTML = '<div style="padding:15px;text-align:center;">Gözləyin...</div>';
+            resultsBox.style.display = 'block';
             try {
-                const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&limit=15`);
-                const data = await res.json();
-                resultsDiv.innerHTML = '';
+                // AllOrigins proxy istifadə edərək bloklamanı keçirik
+                const url = encodeURIComponent(`https://itunes.apple.com/search?term=${q}&media=music&limit=10`);
+                const res = await fetch(`https://api.allorigins.win/get?url=${url}`);
+                const json = await res.json();
+                const data = JSON.parse(json.contents);
+                
+                resultsBox.innerHTML = '';
                 data.results.forEach(item => {
                     const div = document.createElement('div');
                     div.className = 'search-item';
-                    div.innerHTML = `<img src="${item.artworkUrl60}"><div class="search-item-info"><div class="search-item-title">${item.trackName}</div><div class="search-item-artist">${item.artistName}</div></div>`;
+                    div.innerHTML = `<img src="${item.artworkUrl60}"><div class="search-item-info"><div class="search-item-title">${item.trackName}</div><div style="font-size:11px;color:#B3B3B3">${item.artistName}</div></div>`;
                     div.onclick = () => {
-                        const track = { id: item.trackId, title: item.trackName, artist: item.artistName, cover: item.artworkUrl100.replace('100x100', '600x600'), url: item.previewUrl };
-                        if (!queue.find(t => t.id === track.id)) queue.push(track);
-                        currentIdx = queue.findIndex(t => t.id === track.id);
-                        loadTrack(currentIdx);
-                        resultsDiv.style.display = 'none';
+                        const track = { 
+                            title: item.trackName, 
+                            artist: item.artistName, 
+                            art: item.artworkUrl100.replace('100x100', '600x600'), 
+                            url: item.previewUrl 
+                        };
+                        playlist.push(track);
+                        index = playlist.length - 1;
+                        playTrack(index);
+                        resultsBox.style.display = 'none';
                         searchInput.value = '';
                     };
-                    resultsDiv.appendChild(div);
+                    resultsBox.appendChild(div);
                 });
-            } catch (e) { resultsDiv.innerHTML = '<div style="padding:20px;color:red;">Xəta! Yenidən yoxla.</div>'; }
+            } catch (err) { resultsBox.innerHTML = '<div style="padding:15px;color:red;">Xəta! Yenidən yoxlayın.</div>'; }
         }
 
-        let timeout;
-        searchInput.addEventListener('input', e => {
-            clearTimeout(timeout);
-            if(e.target.value.length < 2) return resultsDiv.style.display = 'none';
-            timeout = setTimeout(() => performSearch(e.target.value), 500);
-        });
+        let tOut;
+        searchInput.oninput = (e) => {
+            clearTimeout(tOut);
+            if(e.target.value.length < 2) return resultsBox.style.display = 'none';
+            tOut = setTimeout(() => search(e.target.value), 500);
+        };
 
-        function loadTrack(idx) {
-            const t = queue[idx];
-            audio.src = t.url;
-            document.getElementById('mainArt').src = t.cover;
-            document.getElementById('songTitle').textContent = t.title;
-            document.getElementById('artistName').textContent = t.artist;
-            audio.play();
-            syncPlay(true);
-            renderQueue();
-            document.getElementById('bgLayer').style.background = `linear-gradient(180deg, hsl(${(idx*137)%360}, 20%, 20%) 0%, #121212 100%)`;
+        function playTrack(i) {
+            const track = playlist[i];
+            audio.src = track.url;
+            document.getElementById('mainArt').src = track.art;
+            document.getElementById('title').textContent = track.title;
+            document.getElementById('artist').textContent = track.artist;
+            audio.play().catch(e => console.log("Click play to start"));
+            toggleBtn(true);
+            document.getElementById('bg').style.background = `linear-gradient(180deg, hsl(${(i*137)%360}, 25%, 25%) 0%, #121212 100%)`;
         }
 
-        function renderQueue() {
-            const s = document.getElementById('scrollContainer');
-            s.innerHTML = '';
-            queue.forEach((t, i) => {
-                const div = document.createElement('div');
-                div.className = `list-item ${i === currentIdx ? 'active' : ''}`;
-                div.innerHTML = `<img class="item-thumb" src="${t.cover}">`;
-                div.onclick = () => loadTrack(i);
-                s.appendChild(div);
-            });
+        function toggleBtn(isP) {
+            document.getElementById('p-on').classList.toggle('hidden', isP);
+            document.getElementById('p-off').classList.toggle('hidden', !isP);
         }
 
-        function syncPlay(p) {
-            document.getElementById('playIcon').classList.toggle('hidden', p);
-            document.getElementById('pauseIcon').classList.toggle('hidden', !p);
-        }
+        document.getElementById('play').onclick = () => {
+            if(!audio.src) return;
+            audio.paused ? (audio.play(), toggleBtn(true)) : (audio.pause(), toggleBtn(false));
+        };
 
-        document.getElementById('playBtn').onclick = () => audio.paused ? (audio.play(), syncPlay(true)) : (audio.pause(), syncPlay(false));
-        document.getElementById('nextBtn').onclick = () => queue.length > 0 && loadTrack((currentIdx + 1) % queue.length);
-        document.getElementById('prevBtn').onclick = () => queue.length > 0 && loadTrack((currentIdx - 1 + queue.length) % queue.length);
-        audio.ontimeupdate = () => { document.getElementById('progFill').style.width = (audio.currentTime / audio.duration * 100) + '%'; document.getElementById('curTime').textContent = fmt(audio.currentTime); };
-        audio.onloadedmetadata = () => document.getElementById('durTime').textContent = fmt(audio.duration);
+        document.getElementById('next').onclick = () => playlist.length && playTrack((index + 1) % playlist.length);
+        document.getElementById('prev').onclick = () => playlist.length && playTrack((index - 1 + playlist.length) % playlist.length);
+
+        audio.ontimeupdate = () => {
+            document.getElementById('fill').style.width = (audio.currentTime / audio.duration * 100) + '%';
+            document.getElementById('cur').textContent = fmt(audio.currentTime);
+        };
+        audio.onloadedmetadata = () => document.getElementById('dur').textContent = fmt(audio.duration);
+        audio.onended = () => document.getElementById('next').click();
+
         function fmt(s) { const m = Math.floor(s/60); const ss = Math.floor(s%60); return m+":"+(ss<10?"0":"")+ss; }
-        document.addEventListener('click', e => { if(!e.target.closest('.search-container')) resultsDiv.style.display = 'none'; });
+        document.onclick = (e) => { if(!e.target.closest('.search-container')) resultsBox.style.display = 'none'; };
     </script>
 </body>
 </html>
